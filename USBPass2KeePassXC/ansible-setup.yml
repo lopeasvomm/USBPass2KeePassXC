@@ -1,0 +1,54 @@
+---
+- name: Setup Raspberry Pi Zero for USB Keyboard Password Pass-Through
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure required packages are installed
+      apt:
+        name:
+          - git
+          - python3-pip
+          - keepassxc
+        state: present
+        update_cache: yes
+
+    - name: Add dwc2 overlay to /boot/config.txt
+      lineinfile:
+        path: /boot/config.txt
+        line: 'dtoverlay=dwc2'
+        state: present
+
+    - name: Add modules-load to /boot/cmdline.txt
+      replace:
+        path: /boot/cmdline.txt
+        regexp: '^(.*rootwait)'
+        replace: '\1 modules-load=dwc2,g_hid'
+        backup: yes
+
+    - name: Install pyusb
+      pip:
+        name: pyusb
+        executable: pip3
+
+    - name: Copy send_keys.py script
+      copy:
+        src: send_keys.py
+        dest: /home/pi/send_keys.py
+        owner: pi
+        group: pi
+        mode: '0755'
+
+    - name: Copy type_password.sh script
+      copy:
+        src: type_password.sh
+        dest: /home/pi/type_password.sh
+        owner: pi
+        group: pi
+        mode: '0755'
+
+    - name: Reboot to apply changes
+      reboot:
+        msg: "Rebooting to apply USB gadget configuration."
+        pre_reboot_delay: 5
+        reboot_timeout: 300
+        test_command: whoami
